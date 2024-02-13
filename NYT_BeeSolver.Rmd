@@ -1,0 +1,85 @@
+---
+title: "uh"
+author: "Evan Garcia"
+date: "2024-02-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(RSelenium)
+library(wdman)
+library(netstat)
+library(tidyverse)
+```
+
+```{r}
+words <- read.table("WORDS.txt")[[1]]
+sort_by_char <- function(x){
+  chars <- nchar(x)
+  list <- rev(tapply(x, chars, sort))
+  names(list) <- NULL
+  unlist(list)
+}
+```
+
+```{r}
+bee_solver <- function(letters, solve = FALSE){
+  gold <- letters[1]
+  filter1 <- words[grepl(gold, words) & nchar(words) > 3]
+  filter2 <- sapply(filter1, function(x){strsplit(x, "")})
+  filter3 <- sapply(filter2, unique)
+  works <- function(x){
+    all(x %in% letters)
+  }
+  vals2 <- (vapply(filter3, works, logical(1))) + (vapply(filter3, length, numeric(1)) == 7)
+  vals <- (vapply(filter3, works, logical(1))) - (vapply(filter3, length, numeric(1)) == 7)
+  regular <- names(vals)[vals == 1]
+  penta <- names(vals2)[vals2 == 2]
+  if(!solve){
+    message("The Penta words are: ")
+    print(penta)
+    message("All other words are: ")
+    sort_by_char(regular)
+  }
+  else
+  {
+    c(penta, regular)
+  }
+}
+```
+
+
+```{r knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)}
+remote_driver <-rsDriver(browser = "chrome", chromever = "121.0.6167.140", verbose = FALSE, port = free_port())
+remDr <- remote_driver$client
+remDr$navigate("https://www.nytimes.com/puzzles/spelling-bee")
+Sys.sleep(1) # allows website to load lol
+remDr$findElement(using = 'xpath', '//*[text()="Play"]')$clickElement()
+Sys.sleep(1)
+source_letters <- remDr$findElements(using = 'class name', 'cell-letter')
+Sys.sleep(1)
+letters <- tolower(unlist(lapply(source_letters, function(x){x$getElementText()})))
+
+system("taskkill /im java.exe /f")
+remote_driver$server$stop()
+
+bee_solver(letters, solve = FALSE)
+```
+
+```{r}
+remDr$findElement(using = 'xpath', '//*[text()="b"]')$clickElement()
+
+```
+
+
+
+
+```{r}
+test <- bee_solver(letters, solve = TRUE)
+```
+
+```{r}
+test[1]
+```
+
+
